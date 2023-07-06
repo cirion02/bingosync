@@ -1,11 +1,12 @@
 var ChatSocket = (function(){
     "use strict";
 
-    var ChatSocket = function(chatPanel, board, playersPanel, socketsUrl) {
+    var ChatSocket = function(chatPanel, board, playersPanel, socketsUrl, handleKickMessage) {
         this.chatPanel = chatPanel;
         this.board = board;
         this.playersPanel = playersPanel;
         this.socketsUrl = socketsUrl;
+        this.handleKickMessage = handleKickMessage;
     };
 
     ChatSocket.prototype.init = function(socketKey) {
@@ -30,7 +31,7 @@ var ChatSocket = (function(){
 
     ChatSocket.prototype.onSocketMessage = function(evt) {
         var json = JSON.parse(evt.data);
-        //console.log(json);
+        console.log(json);
         if (json["type"] === "error") {
             console.log("Got error message from socket: ", json);
             return;
@@ -52,6 +53,9 @@ var ChatSocket = (function(){
             else if(json["event_type"] === "disconnected") {
                 this.playersPanel.removePlayer(json["player"]);
             }
+        }
+        else if(json["type"] === "kick") {
+            this.handleKickMessage();
         }
         else if(json["type"] === "new-card") {
             // TODO: remove this external dependency

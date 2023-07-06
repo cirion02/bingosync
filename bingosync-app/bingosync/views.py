@@ -17,9 +17,9 @@ from bingosync.generators import InvalidBoardException, GeneratorException
 from bingosync.forms import RoomForm, JoinRoomForm, GoalListConverterForm
 from bingosync.models.colors import Color
 from bingosync.models.game_type import GameType, ALL_VARIANTS
-from bingosync.models.events import Event, ChatEvent, RevealedEvent, ConnectionEvent, NewCardEvent
+from bingosync.models.events import Event, ChatEvent, RevealedEvent, ConnectionEvent, NewCardEvent, KickPlayersEvent
 from bingosync.models.rooms import Room, Game, LockoutMode, Player
-from bingosync.publish import publish_goal_event, publish_chat_event, publish_color_event, publish_revealed_event
+from bingosync.publish import publish_goal_event, publish_chat_event, publish_color_event, publish_revealed_event, publish_kick_players
 from bingosync.publish import publish_connection_event, publish_new_card_event
 from bingosync.util import generate_encoded_uuid
 
@@ -272,6 +272,17 @@ def chat_message(request):
     chat_event = ChatEvent(player=player, player_color_value=player.color.value, body=text)
     chat_event.save()
     publish_chat_event(chat_event)
+    return HttpResponse("Recieved data: " + str(data))
+
+@csrf_exempt
+def kick_players(request):
+    data = parse_body_json_or_400(request, required_keys=["room"])
+    room = Room.get_for_encoded_uuid_or_404(data["room"])
+    player = _get_session_player(request.session, room)
+    if not player.is_referee:
+        return HttpResponseBadRequest('Unauthorized: You are not a referee', status=401)
+    kick_players_event = KickPlayersEvent(player=player, player_color_value=player.color.value)
+    publish_kick_players(kick_players_event)
     return HttpResponse("Recieved data: " + str(data))
 
 @csrf_exempt
